@@ -71,7 +71,7 @@
   <header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-200/80">
     <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-4">
       <div>
-        <span class="text-xs font-semibold tracking-wider uppercase text-slate-400 block leading-tight">Available
+        <span class="text-xs font-semibold tracking-wider uppercase text-slate-400 block leading-tight">Account
           Balance</span>
         <div id="topbarBalance"
           class="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-slate-900 transition-colors">
@@ -209,10 +209,14 @@
         <div id="progressBar" class="h-full bg-slate-800 rounded-full transition-all duration-300 w-0"></div>
       </div>
 
-      <!-- 3 Values: Paid & Outstanding on Left, Personal Balance Separated to the Right -->
+      <!-- Summary Values: Total, Paid & Outstanding on Left, Personal Balance Separated to the Right -->
       <div class="flex items-center justify-between gap-4 pt-3.5 border-t border-slate-100">
-        <!-- Tag-specific scope (Paid & Outstanding) -->
-        <div class="flex items-center gap-6 sm:gap-8">
+        <!-- Tag-specific scope (Total Expenses, Paid & Outstanding) -->
+        <div class="flex items-center gap-5 sm:gap-7 flex-wrap">
+          <div>
+            <span class="block text-xs font-medium text-slate-400 leading-tight mb-1" id="totalLabel">Total Exp.</span>
+            <strong id="totalStat" class="text-base sm:text-lg font-bold text-slate-800 tabular-nums">₹0</strong>
+          </div>
           <div>
             <span class="block text-xs font-medium text-slate-400 leading-tight mb-1" id="paidLabel">Paid</span>
             <strong id="paidStat" class="text-base sm:text-lg font-bold text-emerald-700 tabular-nums">₹0</strong>
@@ -225,8 +229,8 @@
         </div>
 
         <!-- Right-Aligned Separated Personal Balance (Does NOT change with tag filters) -->
-        <div class="text-right pl-4 border-l border-slate-100">
-          <span class="block text-xs font-medium text-slate-400 leading-tight mb-1">Personal Balance</span>
+        <div class="text-right pl-4 border-l border-slate-100 shrink-0">
+          <span class="block text-xs font-medium text-slate-400 leading-tight mb-1">Leftover</span>
           <strong id="personalBalanceStat"
             class="text-base sm:text-lg font-bold text-slate-900 tabular-nums">₹0</strong>
         </div>
@@ -889,8 +893,9 @@
           return matchName || matchTag || matchAmt;
         });
 
-        // Tag-specific (or all-tag) paid and outstanding for the card (ignoring dividers)
+        // Tag-specific (or all-tag) total, paid and outstanding for the card (ignoring dividers)
         const nonDividerScope = tagFilteredExpenses.filter(e => e.type !== 'divider');
+        const totalForScope = nonDividerScope.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
         const paidForScope = nonDividerScope.reduce((sum, e) => sum + (isChecked(e.id) ? Number(e.amount) || 0 : 0), 0);
         const outstandingForScope = nonDividerScope.reduce((sum, e) => sum + (!isChecked(e.id) ? Number(e.amount) || 0 : 0), 0);
 
@@ -910,7 +915,8 @@
           $('topbarBalance').classList.add('text-slate-900');
         }
 
-        // Card stats: Paid & Outstanding reflect current tag scope
+        // Card stats: Total, Paid & Outstanding reflect current tag scope
+        $('totalStat').textContent = money(totalForScope);
         $('paidStat').textContent = money(paidForScope);
         $('outstandingStat').textContent = money(outstandingForScope);
 
