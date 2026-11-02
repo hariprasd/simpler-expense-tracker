@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f8fafc">
+  <title>Monthly Finance</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Light grey, non-intrusive checkbox */
+    .custom-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: #fff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      width: 20px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .custom-checkbox:hover {
+      border-color: #94a3b8;
+    }
+
+    .custom-checkbox:checked {
+      background-color: #e2e8f0;
+      border-color: #cbd5e1;
+    }
+
+    .custom-checkbox:checked::after {
+      content: '';
+      display: block;
+      width: 5px;
+      height: 9px;
+      border: solid #64748b;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+      margin-top: -2px;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Drag and drop styling */
+    .dragging {
+      opacity: 0.45;
+    }
+
+    .drag-over {
+      border-top: 2px solid #0f172a !important;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen pb-32 antialiased selection:bg-slate-200 text-base">
+
+  <!-- Sticky Top Bar with Available Balance, Salary Pill with Edit Context Menu & Settings -->
+  <header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-slate-200/80">
+    <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-4">
+      <div>
+        <span class="text-xs font-semibold tracking-wider uppercase text-slate-400 block leading-tight">Available
+          Balance</span>
+        <div id="topbarBalance"
+          class="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums text-slate-900 transition-colors">
+          ₹0
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Salary Pill with Context Menu to Edit -->
+        <div class="relative">
+          <button id="salaryPillBtn" type="button" title="Click to edit salary"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200/80 border border-slate-200/80 text-slate-700 text-sm font-semibold transition-colors">
+            <span class="text-xs text-slate-400 font-medium">Salary</span>
+            <span id="salaryPillAmount" class="tabular-nums">₹0</span>
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+              viewBox="0 0 24 24">
+              <path
+                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+
+          <!-- Salary Edit Context Popover -->
+          <div id="salaryMenuDropdown"
+            class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl p-3 z-50 animate-[fadeIn_0.1s_ease-out]">
+            <div class="text-xs font-bold text-slate-800 mb-2">Edit Monthly Salary</div>
+            <div class="relative flex items-center mb-2.5">
+              <span class="absolute left-3 text-slate-400 text-sm font-semibold pointer-events-none">₹</span>
+              <input id="salaryMenuInput" type="number" min="0" step="1" inputmode="decimal" placeholder="0"
+                class="w-full pl-7 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-900 outline-none focus:bg-white focus:border-slate-500 tabular-nums">
+            </div>
+            <div class="flex justify-end gap-1.5">
+              <button id="salaryMenuCancelBtn" type="button"
+                class="px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+              <button id="salaryMenuSaveBtn" type="button"
+                class="px-3 py-1 text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 rounded-lg">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Dropdown -->
+        <div class="relative">
+          <button id="settingsBtn" type="button" aria-label="Settings" title="Settings"
+            class="w-9 h-9 flex items-center justify-center rounded-xl border border-slate-200/80 bg-white hover:bg-slate-100 text-slate-500 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z">
+              </path>
+            </svg>
+          </button>
+
+          <div id="settingsMenu"
+            class="hidden absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-50">
+            <button id="menuResetMonth" type="button"
+              class="w-full whitespace-nowrap flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors text-left">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path d="M3 2v6h6M21 12A9 9 0 006 5.3L3 8M21 22v-6h-6M3 12a9 9 0 0015 6.7l3-2.7" />
+              </svg>
+              Un-check All
+            </button>
+            <div class="h-px bg-slate-100 my-1"></div>
+            <!-- Export JSON -->
+            <button id="menuExportJson" type="button"
+              class="w-full whitespace-nowrap flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors text-left">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              Export data (JSON)
+            </button>
+            <!-- Import JSON -->
+            <button id="menuImportJson" type="button"
+              class="w-full whitespace-nowrap flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors text-left">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Import data (JSON)
+            </button>
+            <input type="file" id="jsonFileInput" accept=".json,application/json" class="hidden">
+            <div class="h-px bg-slate-100 my-1"></div>
+            <button id="menuClearAll" type="button"
+              class="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors text-left">
+              <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete all expenses
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-2xl mx-auto px-4 py-5 space-y-4">
+
+    <!-- Filter Bar with Consistent Sizing, Increased Gap & Search at Right End -->
+    <div class="flex items-center justify-between gap-3 px-1">
+      <!-- Tag filter chips container with increased gap-2.5 -->
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar flex-1 py-0.5" id="tagFiltersRow">
+        <button type="button" data-tag-filter="all"
+          class="filter-tag-btn shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition-colors border border-slate-800 text-slate-900 bg-slate-100/80">
+          All
+        </button>
+      </div>
+
+      <!-- Search input at right end -->
+      <div class="relative flex items-center w-36 sm:w-44 shrink-0">
+        <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" fill="none" stroke="currentColor"
+          stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="M21 21l-4.35-4.35"></path>
+        </svg>
+        <input id="searchInput" type="text" placeholder="Search..."
+          class="w-full pl-8 pr-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 outline-none focus:border-slate-400 transition-colors">
+        <button id="searchClearBtn" type="button"
+          class="hidden absolute right-2 text-slate-400 hover:text-slate-600 text-xs">×</button>
+      </div>
+    </div>
+
+    <!-- Summary Card with "Tag Name • Month" Title, Paid, Outstanding & Right-Aligned Separated Personal Balance -->
+    <section class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <!-- Card title as "Tag name • Month" -->
+        <span id="cardTitle" class="text-sm font-semibold text-slate-700"></span>
+        <span id="paidPercent"
+          class="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full tabular-nums">0%
+          paid</span>
+      </div>
+
+      <!-- Progress bar for the current scope -->
+      <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-4">
+        <div id="progressBar" class="h-full bg-slate-800 rounded-full transition-all duration-300 w-0"></div>
+      </div>
+
+      <!-- 3 Values: Paid & Outstanding on Left, Personal Balance Separated to the Right -->
+      <div class="flex items-center justify-between gap-4 pt-3.5 border-t border-slate-100">
+        <!-- Tag-specific scope (Paid & Outstanding) -->
+        <div class="flex items-center gap-6 sm:gap-8">
+          <div>
+            <span class="block text-xs font-medium text-slate-400 leading-tight mb-1" id="paidLabel">Paid</span>
+            <strong id="paidStat" class="text-base sm:text-lg font-bold text-emerald-700 tabular-nums">₹0</strong>
+          </div>
+          <div>
+            <span class="block text-xs font-medium text-slate-400 leading-tight mb-1"
+              id="outstandingLabel">Outstanding</span>
+            <strong id="outstandingStat" class="text-base sm:text-lg font-bold text-amber-700 tabular-nums">₹0</strong>
+          </div>
+        </div>
+
+        <!-- Right-Aligned Separated Personal Balance (Does NOT change with tag filters) -->
+        <div class="text-right pl-4 border-l border-slate-100">
+          <span class="block text-xs font-medium text-slate-400 leading-tight mb-1">Personal Balance</span>
+          <strong id="personalBalanceStat"
+            class="text-base sm:text-lg font-bold text-slate-900 tabular-nums">₹0</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Expenses Section -->
+    <section class="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
+      <div class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <h2 class="text-base font-bold text-slate-900">Expenses</h2>
+          <span id="expenseCount" class="text-xs font-medium text-slate-400 tabular-nums">(0)</span>
+        </div>
+      </div>
+
+      <!-- Expense List -->
+      <div id="expenseList" class="divide-y divide-slate-100"></div>
+    </section>
+  </main>
+
+  <!-- Sticky Add Expense Bottom Bar -->
+  <aside class="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg py-3">
+    <div class="max-w-2xl mx-auto px-4">
+      <form id="addForm" class="flex items-center gap-2.5">
+        <!-- Combined Input Container with Trailing Tag Dropdown -->
+        <div id="expenseInputCombinedContainer"
+          class="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-xl focus-within:bg-white focus-within:border-slate-400 focus-within:ring-1 focus-within:ring-slate-300 transition-all min-w-[160px] pl-3.5 pr-1.5 py-1">
+          <!-- Description (Type "---" for a divider line) -->
+          <input id="expenseName" type="text" maxlength="60" placeholder="Expense description (or --- for divider)"
+            required
+            class="flex-1 bg-transparent text-sm font-medium text-slate-900 placeholder-slate-400 outline-none min-w-[80px]">
+
+          <!-- Trailing Tag Dropdown Trigger -->
+          <div class="relative shrink-0 ml-1.5" id="tagCustomMenuContainer">
+            <button type="button" id="tagMenuTrigger"
+              class="px-2.5 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 flex items-center gap-1 transition-colors">
+              <span id="tagMenuSelectedText" class="truncate max-w-[80px] sm:max-w-[110px] text-slate-400">No tag</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2"
+                viewBox="0 0 24 24">
+                <path d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <!-- Dropdown Menu Box -->
+            <div id="tagMenuDropdown"
+              class="hidden absolute bottom-full mb-2 right-0 w-52 bg-white border border-slate-200 rounded-xl shadow-2xl p-1.5 z-50 animate-[fadeIn_0.1s_ease-out]">
+              <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">Tag</div>
+
+              <div id="tagMenuList" class="max-h-48 overflow-y-auto space-y-0.5"></div>
+
+              <div class="pt-1 mt-1 border-t border-slate-100">
+                <div class="flex items-center gap-1 px-1">
+                  <input type="text" id="newTagInput" maxlength="20" placeholder="+ New tag"
+                    class="w-full px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-slate-400">
+                  <button type="button" id="newTagAddBtn"
+                    class="px-2 py-1 text-xs font-semibold bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors shrink-0">
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Amount -->
+        <div class="relative flex items-center w-28 sm:w-32 shrink-0" id="expenseAmountContainer">
+          <span class="absolute left-3 text-slate-400 text-sm font-semibold pointer-events-none">₹</span>
+          <input id="expenseAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Amount"
+            class="w-full pl-6 pr-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder-slate-400 outline-none focus:bg-white focus:border-slate-400 transition-all tabular-nums">
+        </div>
+
+        <!-- Add Button -->
+        <button type="submit"
+          class="h-10 px-4 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm rounded-xl transition-colors shrink-0 flex items-center justify-center">
+          + Add
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <!-- Custom Modal -->
+  <div id="confirmModal"
+    class="hidden fixed inset-0 z-50 bg-slate-900/30 backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 max-w-xs w-full shadow-xl">
+      <h3 id="modalTitle" class="text-base font-bold text-slate-900 mb-1">Confirm Action</h3>
+      <p id="modalBody" class="text-sm text-slate-500 mb-4 leading-relaxed">Are you sure?</p>
+      <div class="flex justify-end gap-2">
+        <button id="modalCancelBtn" type="button"
+          class="px-3.5 py-1.5 rounded-xl text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">Cancel</button>
+        <button id="modalConfirmBtn" type="button"
+          class="px-3.5 py-1.5 rounded-xl text-sm font-medium text-white transition-colors">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Toast -->
+  <div id="toast" role="status"
+    class="fixed bottom-20 left-1/2 -translate-x-1/2 opacity-0 pointer-events-none transition-all duration-200 bg-slate-900 text-white text-sm font-medium px-4 py-2 rounded-full shadow-md z-50">
+  </div>
+
+  <script>
+    (() => {
+      const STORAGE_KEY = 'monthly-finance-v1';
+      const monthKey = new Date().toISOString().slice(0, 7);
+      const money = n => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Number(n) || 0);
+      const $ = id => document.getElementById(id);
+
+      // Distinct, distinguishable modern color palettes for custom tags
+      const DISTINGUISHABLE_TAG_COLORS = [
+        'bg-blue-50 text-blue-700 border-blue-200',
+        'bg-emerald-50 text-emerald-700 border-emerald-200',
+        'bg-amber-50 text-amber-700 border-amber-200',
+        'bg-purple-50 text-purple-700 border-purple-200',
+        'bg-rose-50 text-rose-700 border-rose-200',
+        'bg-cyan-50 text-cyan-700 border-cyan-200',
+        'bg-indigo-50 text-indigo-700 border-indigo-200',
+        'bg-orange-50 text-orange-700 border-orange-200',
+        'bg-teal-50 text-teal-700 border-teal-200',
+        'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200'
+      ];
+
+      function getTagColorClass(tagStr) {
+        if (!tagStr) return 'bg-slate-100 text-slate-600 border-slate-200';
+        let hash = 0;
+        for (let i = 0; i < tagStr.length; i++) hash = tagStr.charCodeAt(i) + ((hash << 5) - hash);
+        return DISTINGUISHABLE_TAG_COLORS[Math.abs(hash) % DISTINGUISHABLE_TAG_COLORS.length];
+      }
+
+      function cleanTag(str) {
+        if (!str) return '';
+        const cleaned = str.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+        if (cleaned.toLowerCase() === 'general') return '';
+        return cleaned;
+      }
+
+      let state;
+      try {
+        state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || null;
+      } catch { state = null; }
+
+      if (!state || typeof state !== 'object') {
+        state = { income: 0, expenses: [], checked: {}, customTags: [] };
+      }
+      if (!Array.isArray(state.expenses)) state.expenses = [];
+      if (!Array.isArray(state.customTags)) state.customTags = [];
+      if (!state.checked || typeof state.checked !== 'object') state.checked = {};
+      if (!state.checked[monthKey]) state.checked[monthKey] = [];
+
+      // Helper to normalize tags for an expense item (supports string or array)
+      function getExpenseTags(expense) {
+        if (!expense) return [];
+        if (Array.isArray(expense.tags)) {
+          return expense.tags.map(cleanTag).filter(Boolean);
+        }
+        if (expense.tag) {
+          const t = cleanTag(expense.tag);
+          return t ? [t] : [];
+        }
+        return [];
+      }
+
+      function hasTag(expense, tag) {
+        if (!expense || expense.type === 'divider') return false;
+        const tags = getExpenseTags(expense);
+        return tags.includes(cleanTag(tag));
+      }
+
+      state.expenses.forEach(e => {
+        if (e.type !== 'divider') {
+          e.tags = getExpenseTags(e);
+          delete e.tag;
+        }
+      });
+      state.customTags = state.customTags.map(cleanTag).filter(Boolean);
+
+      let currentTagFilter = 'all';
+      let searchQuery = '';
+      let editingExpenseId = null;
+      let selectedAddTags = []; // Array of selected tags in add bar
+      let draggedItemId = null;
+
+      const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const isChecked = id => state.checked[monthKey].includes(id);
+
+      const toast = message => {
+        const el = $('toast');
+        el.textContent = message;
+        el.classList.remove('opacity-0', 'translate-y-1');
+        el.classList.add('opacity-100', 'translate-y-0');
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => {
+          el.classList.remove('opacity-100', 'translate-y-0');
+          el.classList.add('opacity-0', 'translate-y-1');
+        }, 1800);
+      };
+
+      // Confirmation Modal
+      let pendingModalAction = null;
+      function showModal({ title, body, confirmText = 'Confirm', isDanger = false, onConfirm }) {
+        $('modalTitle').textContent = title;
+        $('modalBody').textContent = body;
+        const confirmBtn = $('modalConfirmBtn');
+        confirmBtn.textContent = confirmText;
+        confirmBtn.className = isDanger
+          ? 'px-3.5 py-1.5 rounded-xl text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white transition-colors'
+          : 'px-3.5 py-1.5 rounded-xl text-sm font-medium bg-slate-900 hover:bg-slate-800 text-white transition-colors';
+        pendingModalAction = onConfirm;
+        const modal = $('confirmModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function hideModal() {
+        const modal = $('confirmModal');
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+        pendingModalAction = null;
+      }
+
+      $('modalCancelBtn').addEventListener('click', hideModal);
+      $('modalConfirmBtn').addEventListener('click', () => {
+        if (typeof pendingModalAction === 'function') pendingModalAction();
+        hideModal();
+      });
+      $('confirmModal').addEventListener('click', e => {
+        if (e.target === $('confirmModal')) hideModal();
+      });
+
+      // Salary Pill Context Menu Edit
+      const salaryPillBtn = $('salaryPillBtn');
+      const salaryMenuDropdown = $('salaryMenuDropdown');
+      const salaryMenuInput = $('salaryMenuInput');
+      const salaryMenuSaveBtn = $('salaryMenuSaveBtn');
+      const salaryMenuCancelBtn = $('salaryMenuCancelBtn');
+
+      salaryPillBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        salaryMenuDropdown.classList.toggle('hidden');
+        if (!salaryMenuDropdown.classList.contains('hidden')) {
+          salaryMenuInput.value = state.income || '';
+          salaryMenuInput.focus();
+        }
+      });
+
+      salaryMenuCancelBtn.addEventListener('click', () => {
+        salaryMenuDropdown.classList.add('hidden');
+      });
+
+      salaryMenuSaveBtn.addEventListener('click', () => {
+        const newSalary = Math.max(0, Number(salaryMenuInput.value) || 0);
+        state.income = newSalary;
+        save();
+        render();
+        salaryMenuDropdown.classList.add('hidden');
+        toast('Salary updated');
+      });
+
+      salaryMenuInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          salaryMenuSaveBtn.click();
+        }
+      });
+
+      // Settings dropdown
+      const settingsBtn = $('settingsBtn');
+      const settingsMenu = $('settingsMenu');
+      settingsBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        settingsMenu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', e => {
+        if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+          settingsMenu.classList.add('hidden');
+        }
+        if (!salaryMenuDropdown.contains(e.target) && e.target !== salaryPillBtn) {
+          salaryMenuDropdown.classList.add('hidden');
+        }
+      });
+
+      $('menuResetMonth').addEventListener('click', () => {
+        settingsMenu.classList.add('hidden');
+        if (!state.checked[monthKey].length) {
+          toast('No checked expenses to reset');
+          return;
+        }
+        showModal({
+          title: 'Reset Checkmarks',
+          body: 'Uncheck all expenses for this month?',
+          confirmText: 'Reset',
+          onConfirm: () => {
+            state.checked[monthKey] = [];
+            save();
+            render();
+            toast('Checklist reset');
+          }
+        });
+      });
+
+      // Export JSON
+      $('menuExportJson').addEventListener('click', () => {
+        settingsMenu.classList.add('hidden');
+        const exportData = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          state: state
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `monthly-finance-${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast('Data exported to JSON');
+      });
+
+      // Import JSON
+      const jsonFileInput = $('jsonFileInput');
+      $('menuImportJson').addEventListener('click', () => {
+        settingsMenu.classList.add('hidden');
+        jsonFileInput.value = '';
+        jsonFileInput.click();
+      });
+
+      jsonFileInput.addEventListener('change', e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            const importedState = parsed && parsed.state ? parsed.state : parsed;
+
+            if (!importedState || typeof importedState !== 'object') {
+              throw new Error('Invalid JSON format');
+            }
+
+            showModal({
+              title: 'Import Finance Data',
+              body: 'Importing will replace your current expenses, salary, and tags with the imported file. Continue?',
+              confirmText: 'Import',
+              onConfirm: () => {
+                state.income = Number(importedState.income) || 0;
+                state.expenses = Array.isArray(importedState.expenses) ? importedState.expenses : [];
+                state.checked = importedState.checked && typeof importedState.checked === 'object' ? importedState.checked : {};
+                if (!state.checked[monthKey]) state.checked[monthKey] = [];
+                state.customTags = Array.isArray(importedState.customTags) ? importedState.customTags.map(cleanTag).filter(Boolean) : [];
+
+                state.expenses.forEach(exp => {
+                  if (exp.type !== 'divider') {
+                    exp.tags = getExpenseTags(exp);
+                    delete exp.tag;
+                  }
+                });
+
+                save();
+                updateTagFilterChips();
+                render();
+                toast('Data imported successfully');
+              }
+            });
+          } catch (err) {
+            toast('Failed to parse JSON file');
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      $('menuClearAll').addEventListener('click', () => {
+        settingsMenu.classList.add('hidden');
+        if (!state.expenses.length) {
+          toast('No expenses to clear');
+          return;
+        }
+        showModal({
+          title: 'Clear All Expenses',
+          body: 'Permanently remove all expenses on this device?',
+          confirmText: 'Delete All',
+          isDanger: true,
+          onConfirm: () => {
+            state.expenses = [];
+            state.checked[monthKey] = [];
+            save();
+            render();
+            toast('All expenses deleted');
+          }
+        });
+      });
+
+      function getCustomTags() {
+        const set = new Set([...state.customTags]);
+        state.expenses.forEach(e => {
+          if (e.type !== 'divider') {
+            getExpenseTags(e).forEach(t => set.add(t));
+          }
+        });
+        return Array.from(set).filter(Boolean);
+      }
+
+      // Custom Tag Menu in Add Bar (Multi-select)
+      const tagMenuTrigger = $('tagMenuTrigger');
+      const tagMenuDropdown = $('tagMenuDropdown');
+      const tagMenuList = $('tagMenuList');
+      const tagMenuSelectedText = $('tagMenuSelectedText');
+
+      tagMenuTrigger.addEventListener('click', e => {
+        e.stopPropagation();
+        tagMenuDropdown.classList.toggle('hidden');
+        if (!tagMenuDropdown.classList.contains('hidden')) {
+          renderTagMenuList();
+        }
+      });
+
+      document.addEventListener('click', e => {
+        if (!tagMenuDropdown.contains(e.target) && e.target !== tagMenuTrigger) {
+          tagMenuDropdown.classList.add('hidden');
+        }
+      });
+
+      function updateAddTagsTriggerText() {
+        if (!selectedAddTags.length) {
+          tagMenuSelectedText.textContent = 'No tag';
+          tagMenuSelectedText.className = 'truncate max-w-[80px] sm:max-w-[110px] text-slate-400';
+        } else if (selectedAddTags.length === 1) {
+          tagMenuSelectedText.textContent = selectedAddTags[0];
+          tagMenuSelectedText.className = 'truncate max-w-[80px] sm:max-w-[110px] text-slate-800 font-semibold';
+        } else {
+          tagMenuSelectedText.textContent = `${selectedAddTags.length} tags`;
+          tagMenuSelectedText.className = 'truncate max-w-[80px] sm:max-w-[110px] text-slate-800 font-semibold';
+        }
+      }
+
+      function renderTagMenuList() {
+        const tags = getCustomTags();
+        tagMenuList.innerHTML = '';
+
+        // "Clear all / No tag" option
+        const noTagRow = document.createElement('div');
+        noTagRow.className = `group flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-100 cursor-pointer text-xs transition-colors ${!selectedAddTags.length ? 'bg-slate-100/70 font-semibold text-slate-900' : 'text-slate-500'}`;
+        noTagRow.innerHTML = `<span class="italic">None (clear tags)</span>`;
+        noTagRow.addEventListener('click', () => {
+          selectedAddTags = [];
+          updateAddTagsTriggerText();
+          renderTagMenuList();
+        });
+        tagMenuList.appendChild(noTagRow);
+
+        tags.forEach(t => {
+          const isSelected = selectedAddTags.includes(t);
+          const itemRow = document.createElement('div');
+          itemRow.className = `group flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-100 cursor-pointer text-xs transition-colors ${isSelected ? 'bg-slate-50 font-semibold' : ''}`;
+
+          const leftWrap = document.createElement('div');
+          leftWrap.className = 'flex items-center gap-2 flex-1 min-w-0';
+
+          const checkIcon = document.createElement('span');
+          checkIcon.className = `w-3.5 h-3.5 rounded flex items-center justify-center text-[10px] border shrink-0 ${isSelected ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-300'}`;
+          checkIcon.textContent = isSelected ? '✓' : '';
+
+          const tagText = document.createElement('span');
+          tagText.className = `truncate ${isSelected ? 'text-slate-900' : 'text-slate-700'}`;
+          tagText.textContent = t;
+
+          leftWrap.append(checkIcon, tagText);
+          itemRow.appendChild(leftWrap);
+
+          // Multi-select toggle on row click
+          itemRow.addEventListener('click', (e) => {
+            if (e.target.closest('.tag-del-btn')) return;
+            if (selectedAddTags.includes(t)) {
+              selectedAddTags = selectedAddTags.filter(x => x !== t);
+            } else {
+              selectedAddTags.push(t);
+            }
+            updateAddTagsTriggerText();
+            renderTagMenuList();
+          });
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.title = `Delete tag "${t}"`;
+          delBtn.className = 'tag-del-btn opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 w-5 h-5 flex items-center justify-center rounded text-sm transition-opacity';
+          delBtn.textContent = '×';
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showModal({
+              title: 'Delete Tag',
+              body: `Delete tag "${t}"? It will be removed from all associated expenses.`,
+              confirmText: 'Delete',
+              isDanger: true,
+              onConfirm: () => {
+                state.customTags = state.customTags.filter(x => x !== t);
+                state.expenses.forEach(exp => {
+                  if (exp.type !== 'divider') {
+                    exp.tags = getExpenseTags(exp).filter(x => x !== t);
+                  }
+                });
+                selectedAddTags = selectedAddTags.filter(x => x !== t);
+                updateAddTagsTriggerText();
+                if (currentTagFilter === t) {
+                  currentTagFilter = 'all';
+                }
+                save();
+                renderTagMenuList();
+                updateTagFilterChips();
+                render();
+                toast(`Tag "${t}" removed`);
+              }
+            });
+          });
+          itemRow.appendChild(delBtn);
+
+          tagMenuList.appendChild(itemRow);
+        });
+      }
+
+      function addNewTag(name) {
+        const cleaned = cleanTag(name);
+        if (!cleaned) return;
+        if (!state.customTags.includes(cleaned)) {
+          state.customTags.push(cleaned);
+          save();
+        }
+        if (!selectedAddTags.includes(cleaned)) {
+          selectedAddTags.push(cleaned);
+        }
+        updateAddTagsTriggerText();
+        renderTagMenuList();
+        updateTagFilterChips();
+        toast(`Tag "${cleaned}" added`);
+      }
+
+      $('newTagAddBtn').addEventListener('click', () => {
+        const input = $('newTagInput');
+        addNewTag(input.value);
+        input.value = '';
+      });
+
+      $('newTagInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addNewTag($('newTagInput').value);
+          $('newTagInput').value = '';
+        }
+      });
+
+      // Top Filters with Uniform Styling and Proper Custom Tag Rendering
+      function updateTagFilterChips() {
+        const row = $('tagFiltersRow');
+        row.innerHTML = '';
+
+        // Build "All" button
+        const allBtn = document.createElement('button');
+        allBtn.type = 'button';
+        allBtn.dataset.tagFilter = 'all';
+        allBtn.className = 'filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors';
+        allBtn.textContent = 'All';
+        allBtn.onclick = () => {
+          currentTagFilter = 'all';
+          updateTagFilterUI();
+          render();
+        };
+        row.appendChild(allBtn);
+
+        const tags = getCustomTags();
+        tags.forEach(tag => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.dataset.tagFilter = tag;
+          btn.className = 'filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors';
+          btn.textContent = tag;
+          btn.onclick = () => {
+            currentTagFilter = tag;
+            updateTagFilterUI();
+            render();
+          };
+          row.appendChild(btn);
+        });
+
+        updateTagFilterUI();
+      }
+
+      // Proper styling of All and custom tags in the filter bar with distinguishable tag colors
+      function updateTagFilterUI() {
+        document.querySelectorAll('#tagFiltersRow .filter-tag-btn').forEach(b => {
+          const tag = b.dataset.tagFilter;
+          const isSelected = tag === currentTagFilter;
+
+          if (tag === 'all') {
+            if (isSelected) {
+              b.className = 'filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-semibold transition-colors border border-slate-900 text-white bg-slate-900 shadow-sm';
+            } else {
+              b.className = 'filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 bg-white';
+            }
+          } else {
+            const colorClass = getTagColorClass(tag);
+            if (isSelected) {
+              // Active custom tag: stronger border & subtle shadow while highlighting its distinct color
+              b.className = `filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-bold transition-colors border-2 shadow-sm ring-1 ring-slate-400/20 ${colorClass}`;
+            } else {
+              // Inactive custom tag: clear tag color pill with soft border
+              b.className = `filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors border hover:shadow-xs opacity-70 hover:opacity-100 ${colorClass}`;
+            }
+          }
+        });
+      }
+
+      // Search input listeners
+      const searchInput = $('searchInput');
+      const searchClearBtn = $('searchClearBtn');
+
+      searchInput.addEventListener('input', e => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        searchClearBtn.classList.toggle('hidden', !searchQuery);
+        render();
+      });
+
+      searchClearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        searchQuery = '';
+        searchClearBtn.classList.add('hidden');
+        render();
+      });
+
+      function render() {
+        const income = Number(state.income) || 0;
+        $('salaryPillAmount').textContent = money(income);
+
+        const monthStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+        // Card title formatted as "Tag name • Month" or simply Month when All
+        if (currentTagFilter === 'all') {
+          $('cardTitle').textContent = `Overview • ${monthStr}`;
+        } else {
+          $('cardTitle').textContent = `${currentTagFilter} • ${monthStr}`;
+        }
+
+        // Filter by selected tag (dividers are included in "all" or if tag matches)
+        const tagFilteredExpenses = state.expenses.filter(e => {
+          if (currentTagFilter !== 'all') {
+            if (e.type === 'divider') return false;
+            if (!hasTag(e, currentTagFilter)) return false;
+          }
+          return true;
+        });
+
+        // Filter by search query
+        const displayExpenses = tagFilteredExpenses.filter(e => {
+          if (e.type === 'divider') return !searchQuery;
+          if (!searchQuery) return true;
+          const matchName = e.name && e.name.toLowerCase().includes(searchQuery);
+          const tags = getExpenseTags(e);
+          const matchTag = tags.some(t => t.toLowerCase().includes(searchQuery));
+          const matchAmt = String(e.amount).includes(searchQuery);
+          return matchName || matchTag || matchAmt;
+        });
+
+        // Tag-specific (or all-tag) paid and outstanding for the card (ignoring dividers)
+        const nonDividerScope = tagFilteredExpenses.filter(e => e.type !== 'divider');
+        const paidForScope = nonDividerScope.reduce((sum, e) => sum + (isChecked(e.id) ? Number(e.amount) || 0 : 0), 0);
+        const outstandingForScope = nonDividerScope.reduce((sum, e) => sum + (!isChecked(e.id) ? Number(e.amount) || 0 : 0), 0);
+
+        // Total expenses across ALL non-divider items
+        const nonDividersAll = state.expenses.filter(e => e.type !== 'divider');
+        const totalPaidAll = nonDividersAll.reduce((sum, e) => sum + (isChecked(e.id) ? Number(e.amount) || 0 : 0), 0);
+        const totalOutstandingAll = nonDividersAll.reduce((sum, e) => sum + (!isChecked(e.id) ? Number(e.amount) || 0 : 0), 0);
+
+        // Available balance in topbar: Income - Total Paid All
+        const overallAvailableBalance = income - totalPaidAll;
+        $('topbarBalance').textContent = money(overallAvailableBalance);
+        if (overallAvailableBalance < 0) {
+          $('topbarBalance').classList.add('text-rose-600');
+          $('topbarBalance').classList.remove('text-slate-900');
+        } else {
+          $('topbarBalance').classList.remove('text-rose-600');
+          $('topbarBalance').classList.add('text-slate-900');
+        }
+
+        // Card stats: Paid & Outstanding reflect current tag scope
+        $('paidStat').textContent = money(paidForScope);
+        $('outstandingStat').textContent = money(outstandingForScope);
+
+        // Personal Balance is ALWAYS Income - (Total Paid All + Total Outstanding All)
+        const truePersonalBalance = income - (totalPaidAll + totalOutstandingAll);
+        $('personalBalanceStat').textContent = money(truePersonalBalance);
+        if (truePersonalBalance < 0) {
+          $('personalBalanceStat').classList.add('text-rose-600');
+          $('personalBalanceStat').classList.remove('text-slate-900');
+        } else {
+          $('personalBalanceStat').classList.remove('text-rose-600');
+          $('personalBalanceStat').classList.add('text-slate-900');
+        }
+
+        // Progress bar for the current scope
+        const totalScopeItems = nonDividerScope.length;
+        const checkedScopeItems = nonDividerScope.filter(e => isChecked(e.id)).length;
+        const pct = totalScopeItems ? Math.round((checkedScopeItems / totalScopeItems) * 100) : 0;
+
+        $('paidPercent').textContent = `${pct}% paid`;
+        $('expenseCount').textContent = `(${nonDividerScope.length})`;
+        $('progressBar').style.width = `${pct}%`;
+
+        const list = $('expenseList');
+        list.innerHTML = '';
+
+        if (!state.expenses.length) {
+          list.innerHTML = '<div class="py-10 text-center text-sm text-slate-400">No expenses yet. Add one using the bar below.</div>';
+          return;
+        }
+
+        if (!displayExpenses.length) {
+          list.innerHTML = `<div class="py-10 text-center text-sm text-slate-400">${searchQuery ? 'No expenses match your search.' : 'No expenses in this tag.'}</div>`;
+          return;
+        }
+
+        displayExpenses.forEach(expense => {
+          // Render Draggable Divider Item
+          if (expense.type === 'divider') {
+            const divRow = createDividerRow(expense);
+            list.appendChild(divRow);
+            return;
+          }
+
+          if (editingExpenseId === expense.id) {
+            list.appendChild(createInlineEditRow(expense));
+            return;
+          }
+
+          const done = isChecked(expense.id);
+
+          const row = document.createElement('div');
+          row.className = 'group py-3 flex items-center gap-3.5 transition-colors hover:bg-slate-50/70 -mx-1.5 px-1.5 rounded-xl';
+          row.dataset.id = expense.id;
+
+          // Drag and drop event handlers
+          setupDragAndDrop(row, expense.id);
+
+          const check = document.createElement('input');
+          check.type = 'checkbox';
+          check.className = 'custom-checkbox';
+          check.checked = done;
+          check.setAttribute('aria-label', `Mark ${expense.name} paid`);
+          check.addEventListener('change', () => {
+            const checked = state.checked[monthKey];
+            state.checked[monthKey] = check.checked ? [...checked, expense.id] : checked.filter(id => id !== expense.id);
+            save();
+            render();
+          });
+
+          const info = document.createElement('div');
+          info.className = 'flex-1 min-w-0 flex items-center gap-1.5 flex-wrap';
+
+          const name = document.createElement('span');
+          name.className = `text-sm sm:text-base font-semibold truncate ${done ? 'line-through text-slate-400' : 'text-slate-800'}`;
+          name.textContent = expense.name;
+          info.appendChild(name);
+
+          const itemTags = getExpenseTags(expense);
+          if (itemTags.length) {
+            itemTags.forEach(t => {
+              const tag = document.createElement('span');
+              tag.className = `text-xs font-medium px-1.5 py-0.5 rounded-md border ${getTagColorClass(t)} ${done ? 'opacity-40' : ''}`;
+              tag.textContent = t;
+              info.appendChild(tag);
+            });
+          }
+
+          const amt = document.createElement('div');
+          amt.className = `text-sm sm:text-base font-bold tabular-nums shrink-0 ${done ? 'text-slate-400' : 'text-slate-900'}`;
+          amt.textContent = money(expense.amount);
+
+          const actions = document.createElement('div');
+          actions.className = 'opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1 shrink-0 transition-opacity';
+
+          const editBtn = document.createElement('button');
+          editBtn.type = 'button';
+          editBtn.title = 'Edit';
+          editBtn.className = 'w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-sm';
+          editBtn.textContent = '✎';
+          editBtn.addEventListener('click', () => {
+            editingExpenseId = expense.id;
+            render();
+          });
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.title = 'Delete';
+          delBtn.className = 'w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-base';
+          delBtn.textContent = '×';
+          delBtn.addEventListener('click', () => {
+            showModal({
+              title: 'Delete Expense',
+              body: `Delete “${expense.name}”?`,
+              confirmText: 'Delete',
+              isDanger: true,
+              onConfirm: () => {
+                state.expenses = state.expenses.filter(e => e.id !== expense.id);
+                Object.keys(state.checked).forEach(m => {
+                  state.checked[m] = state.checked[m].filter(id => id !== expense.id);
+                });
+                save();
+                render();
+                toast('Deleted');
+              }
+            });
+          });
+
+          actions.append(editBtn, delBtn);
+          row.append(check, info, amt, actions);
+          list.appendChild(row);
+        });
+      }
+
+      // Create a Draggable Divider Line Row
+      function createDividerRow(expense) {
+        const row = document.createElement('div');
+        row.className = 'group relative py-2.5 flex items-center transition-colors cursor-grab active:cursor-grabbing select-none -mx-1.5 px-1.5 rounded-lg';
+        row.draggable = true;
+        row.dataset.id = expense.id;
+
+        setupDragAndDrop(row, expense.id);
+
+        // Reorder handle icon - visible ONLY on hover
+        const handle = document.createElement('div');
+        handle.className = 'opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-700 transition-opacity flex items-center justify-center shrink-0 w-5 -ml-1 mr-1.5';
+        handle.title = 'Drag to reorder section';
+        handle.innerHTML = `
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+            <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+            <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+          </svg>
+        `;
+
+        // Continuous divider line spanning full container width (no text label)
+        const line = document.createElement('div');
+        line.className = 'h-px bg-slate-200/90 flex-1';
+
+        // Delete divider button on hover
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.title = 'Remove divider';
+        delBtn.className = 'opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 w-6 h-6 flex items-center justify-center text-base rounded transition-opacity shrink-0 ml-1.5';
+        delBtn.textContent = '×';
+        delBtn.addEventListener('click', () => {
+          state.expenses = state.expenses.filter(e => e.id !== expense.id);
+          save();
+          render();
+          toast('Divider removed');
+        });
+
+        row.append(handle, line, delBtn);
+        return row;
+      }
+
+      // Drag and Drop Helper for reordering list items and dividers
+      function setupDragAndDrop(element, id) {
+        element.draggable = true;
+
+        element.addEventListener('dragstart', e => {
+          draggedItemId = id;
+          element.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        element.addEventListener('dragend', () => {
+          draggedItemId = null;
+          element.classList.remove('dragging');
+          document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        });
+
+        element.addEventListener('dragover', e => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          element.classList.add('drag-over');
+        });
+
+        element.addEventListener('dragleave', () => {
+          element.classList.remove('drag-over');
+        });
+
+        element.addEventListener('drop', e => {
+          e.preventDefault();
+          element.classList.remove('drag-over');
+          if (!draggedItemId || draggedItemId === id) return;
+
+          const fromIdx = state.expenses.findIndex(e => e.id === draggedItemId);
+          const toIdx = state.expenses.findIndex(e => e.id === id);
+
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = state.expenses.splice(fromIdx, 1);
+            state.expenses.splice(toIdx, 0, moved);
+            save();
+            render();
+          }
+        });
+      }
+
+      function createInlineEditRow(expense) {
+        const wrap = document.createElement('div');
+        wrap.className = 'py-2.5';
+
+        const box = document.createElement('div');
+        box.className = 'p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5';
+
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-2';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.maxLength = 60;
+        nameInput.value = expense.name;
+        nameInput.className = 'px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-900 outline-none focus:border-slate-500';
+
+        const amtInput = document.createElement('input');
+        amtInput.type = 'number';
+        amtInput.step = '0.01';
+        amtInput.min = '0.01';
+        amtInput.value = expense.amount;
+        amtInput.className = 'px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-900 outline-none focus:border-slate-500 tabular-nums';
+
+        grid.append(nameInput, amtInput);
+
+        // Multi-select tags checkboxes for inline edit
+        const tagsRow = document.createElement('div');
+        tagsRow.className = 'pt-1 flex items-center gap-1.5 flex-wrap';
+
+        const tagsLabel = document.createElement('span');
+        tagsLabel.className = 'text-xs font-semibold text-slate-400 mr-1';
+        tagsLabel.textContent = 'Tags:';
+        tagsRow.appendChild(tagsLabel);
+
+        const currentEditTags = new Set(getExpenseTags(expense));
+        const allTags = getCustomTags();
+
+        if (!allTags.length) {
+          const noTagsSpan = document.createElement('span');
+          noTagsSpan.className = 'text-xs text-slate-400 italic';
+          noTagsSpan.textContent = 'No custom tags created yet';
+          tagsRow.appendChild(noTagsSpan);
+        } else {
+          allTags.forEach(t => {
+            const tagBtn = document.createElement('button');
+            tagBtn.type = 'button';
+            const isChecked = currentEditTags.has(t);
+            tagBtn.className = `px-2.5 py-0.5 rounded-md text-xs font-medium border transition-colors cursor-pointer ${isChecked ? 'bg-slate-900 text-white border-slate-900 font-semibold' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+              }`;
+            tagBtn.textContent = (isChecked ? '✓ ' : '') + t;
+            tagBtn.onclick = () => {
+              if (currentEditTags.has(t)) {
+                currentEditTags.delete(t);
+              } else {
+                currentEditTags.add(t);
+              }
+              const checkedNow = currentEditTags.has(t);
+              tagBtn.className = `px-2.5 py-0.5 rounded-md text-xs font-medium border transition-colors cursor-pointer ${checkedNow ? 'bg-slate-900 text-white border-slate-900 font-semibold' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                }`;
+              tagBtn.textContent = (checkedNow ? '✓ ' : '') + t;
+            };
+            tagsRow.appendChild(tagBtn);
+          });
+        }
+
+        const bottom = document.createElement('div');
+        bottom.className = 'flex items-center justify-end gap-2 pt-1';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'px-3 py-1.5 rounded-lg text-sm font-medium bg-white hover:bg-slate-100 text-slate-600 border border-slate-200';
+        cancelBtn.addEventListener('click', () => {
+          editingExpenseId = null;
+          render();
+        });
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.textContent = 'Save';
+        saveBtn.className = 'px-4 py-1.5 rounded-lg text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white';
+        saveBtn.addEventListener('click', () => {
+          const newName = nameInput.value.trim();
+          const newAmt = Number(amtInput.value);
+          if (!newName || !Number.isFinite(newAmt) || newAmt <= 0) {
+            toast('Enter valid description & amount');
+            return;
+          }
+          expense.name = newName;
+          expense.amount = newAmt;
+          expense.tags = Array.from(currentEditTags);
+          delete expense.tag;
+          editingExpenseId = null;
+          save();
+          updateTagFilterChips();
+          render();
+          toast('Updated');
+        });
+
+        bottom.append(cancelBtn, saveBtn);
+        box.append(grid, tagsRow, bottom);
+        wrap.appendChild(box);
+        return wrap;
+      }
+
+      // Responsive adjustments when typing "---"
+      const expenseNameInput = $('expenseName');
+      const expenseAmountContainer = $('expenseAmountContainer');
+      const tagCustomMenuContainer = $('tagCustomMenuContainer');
+
+      expenseNameInput.addEventListener('input', () => {
+        const val = expenseNameInput.value.trim();
+        const isDivider = val.startsWith('---');
+        expenseAmountContainer.style.opacity = isDivider ? '0.4' : '1';
+        tagCustomMenuContainer.style.opacity = isDivider ? '0.4' : '1';
+      });
+
+      $('addForm').addEventListener('submit', e => {
+        e.preventDefault();
+        const rawName = $('expenseName').value.trim();
+
+        // Check if user entered "---" or "--- Section Name"
+        if (rawName.startsWith('---')) {
+          state.expenses.push({
+            id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+            type: 'divider',
+            name: '---',
+            amount: 0
+          });
+
+          save();
+          render();
+          $('addForm').reset();
+          expenseAmountContainer.style.opacity = '1';
+          tagCustomMenuContainer.style.opacity = '1';
+          $('expenseName').focus();
+          toast('Divider added! Drag to position');
+          return;
+        }
+
+        const amount = Number($('expenseAmount').value);
+        const tags = selectedAddTags.map(cleanTag).filter(Boolean);
+
+        if (!rawName || !Number.isFinite(amount) || amount <= 0) {
+          toast('Enter valid description & amount');
+          return;
+        }
+
+        state.expenses.push({
+          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+          type: 'expense',
+          name: rawName,
+          amount,
+          tags
+        });
+
+        save();
+        updateTagFilterChips();
+        render();
+
+        $('addForm').reset();
+        selectedAddTags = [];
+        updateAddTagsTriggerText();
+        $('expenseName').focus();
+        toast('Added');
+      });
+
+      updateTagFilterChips();
+      render();
+    })();
+  </script>
+</body>
+
+</html>
