@@ -437,6 +437,8 @@
       state.customTags = state.customTags.map(cleanTag).filter(Boolean);
 
       let currentTagFilter = 'all';
+      let filterMode = 'include'; // 'include' (only selected tag) | 'exclude' (everything except selected tags)
+      let excludedTags = [];
       let currentStatusFilter = 'all'; // 'all', 'paid', 'outstanding'
       let searchQuery = '';
       let editingExpenseId = null;
@@ -623,6 +625,9 @@
                 });
 
                 save();
+                currentTagFilter = 'all';
+                excludedTags = [];
+                filterMode = 'include';
                 updateTagFilterChips();
                 render();
                 toast('Data imported successfully');
@@ -769,6 +774,7 @@
                 if (currentTagFilter === t) {
                   currentTagFilter = 'all';
                 }
+                excludedTags = excludedTags.filter(x => x !== t);
                 save();
                 renderTagMenuList();
                 updateTagFilterChips();
@@ -826,10 +832,26 @@
         allBtn.textContent = 'All';
         allBtn.onclick = () => {
           currentTagFilter = 'all';
+          excludedTags = [];
           updateTagFilterUI();
           render();
         };
         row.appendChild(allBtn);
+
+        // Include / Exclude mode toggle
+        const modeBtn = document.createElement('button');
+        modeBtn.type = 'button';
+        modeBtn.dataset.tagFilter = 'mode';
+        modeBtn.className = 'filter-tag-btn shrink-0 px-2 py-1 rounded-lg text-xs font-medium transition-colors';
+        modeBtn.onclick = () => {
+          filterMode = filterMode === 'include' ? 'exclude' : 'include';
+          currentTagFilter = 'all';
+          excludedTags = [];
+          updateTagFilterChips();
+          render();
+          toast(filterMode === 'exclude' ? 'Exclude mode: tap tags to hide them' : 'Include mode: tap a tag to show only it');
+        };
+        row.appendChild(modeBtn);
 
         const tags = getCustomTags();
         tags.forEach(tag => {
@@ -839,7 +861,13 @@
           btn.className = 'filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors';
           btn.textContent = tag;
           btn.onclick = () => {
-            currentTagFilter = tag;
+            if (filterMode === 'exclude') {
+              excludedTags = excludedTags.includes(tag)
+                ? excludedTags.filter(t => t !== tag)
+                : [...excludedTags, tag];
+            } else {
+              currentTagFilter = tag;
+            }
             updateTagFilterUI();
             render();
           };
@@ -849,27 +877,60 @@
         updateTagFilterUI();
       }
 
-      // Proper styling of All and custom tags in the filter bar with distinguishable tag colors
+      // Proper styling of All, mode toggle and custom tags in the filter bar
       function updateTagFilterUI() {
         document.querySelectorAll('#tagFiltersRow .filter-tag-btn').forEach(b => {
           const tag = b.dataset.tagFilter;
-          const isSelected = tag === currentTagFilter;
+          const isExcludeMode = filterMode === 'exclude';
+
+          if (tag === 'mode') {
+            const icon = isExcludeMode
+              ? '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>'
+              : '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';
+            b.innerHTML = `${icon}<span>${isExcludeMode ? 'Excluding' : 'Including'}</span>`;
+            b.title = isExcludeMode
+              ? 'Currently hiding the tags you select. Tap to switch to include mode.'
+              : 'Currently showing only the tag you select. Tap to switch to exclude mode.';
+            b.setAttribute('aria-label', b.title);
+            b.className = isExcludeMode
+              ? 'filter-tag-btn shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-colors border border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100'
+              : 'filter-tag-btn shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors border border-dashed border-slate-300 text-slate-500 bg-white hover:text-slate-900 hover:border-slate-400';
+            return;
+          }
 
           if (tag === 'all') {
+            const isSelected = isExcludeMode ? excludedTags.length === 0 : currentTagFilter === 'all';
             if (isSelected) {
               b.className = 'filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-semibold transition-colors border border-slate-900 text-white bg-slate-900 shadow-sm';
             } else {
               b.className = 'filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 bg-white';
             }
-          } else {
-            const colorClass = getTagColorClass(tag);
-            if (isSelected) {
-              // Active custom tag: stronger border & subtle shadow while highlighting its distinct color
-              b.className = `filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-bold transition-colors border-2 shadow-sm ring-1 ring-slate-400/20 ${colorClass}`;
+            return;
+          }
+
+          if (isExcludeMode) {
+            const isExcluded = excludedTags.includes(tag);
+            b.textContent = isExcluded ? `− ${tag}` : tag;
+            if (isExcluded) {
+              b.title = `Hidden — tap to show "${tag}" again`;
+              b.className = 'filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-semibold line-through transition-colors border border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100';
             } else {
-              // Inactive custom tag: clear tag color pill with soft border
-              b.className = `filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors border hover:shadow-xs opacity-70 hover:opacity-100 ${colorClass}`;
+              b.title = `Tap to hide "${tag}"`;
+              b.className = `filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors border hover:shadow-xs opacity-70 hover:opacity-100 ${getTagColorClass(tag)}`;
             }
+            return;
+          }
+
+          b.textContent = tag;
+          b.title = `Show only "${tag}"`;
+          const isSelected = tag === currentTagFilter;
+          const colorClass = getTagColorClass(tag);
+          if (isSelected) {
+            // Active custom tag: stronger border & subtle shadow while highlighting its distinct color
+            b.className = `filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-bold transition-colors border-2 shadow-sm ring-1 ring-slate-400/20 ${colorClass}`;
+          } else {
+            // Inactive custom tag: clear tag color pill with soft border
+            b.className = `filter-tag-btn shrink-0 px-1.5 py-1 rounded-lg text-xs font-medium transition-colors border hover:shadow-xs opacity-70 hover:opacity-100 ${colorClass}`;
           }
         });
       }
@@ -941,19 +1002,33 @@
 
         const monthStr = new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-        // Card title formatted as "Tag name • Month" or simply Month when All
-        if (currentTagFilter === 'all') {
+        // Card title formatted as "Tag name • Month", "Excluding …" or simply Month when unfiltered
+        if (filterMode === 'exclude') {
+          if (!excludedTags.length) {
+            $('cardTitle').textContent = `Overview • ${monthStr}`;
+          } else if (excludedTags.length === 1) {
+            $('cardTitle').textContent = `Excluding ${excludedTags[0]} • ${monthStr}`;
+          } else {
+            $('cardTitle').textContent = `Excluding ${excludedTags.length} tags • ${monthStr}`;
+          }
+        } else if (currentTagFilter === 'all') {
           $('cardTitle').textContent = `Overview • ${monthStr}`;
         } else {
           $('cardTitle').textContent = `${currentTagFilter} • ${monthStr}`;
         }
 
-        // Filter by selected tag (dividers are included in "all" or if tag matches)
+        // Filter by selected tag(s); dividers show only when no tag filter is active
+        const tagFilterActive = filterMode === 'exclude' ? excludedTags.length > 0 : currentTagFilter !== 'all';
+
         const tagFilteredExpenses = state.expenses.filter(e => {
-          if (currentTagFilter !== 'all') {
-            if (e.type === 'divider') return false;
-            if (!hasTag(e, currentTagFilter)) return false;
+          if (e.type === 'divider') return !tagFilterActive;
+
+          if (filterMode === 'exclude') {
+            if (!excludedTags.length) return true;
+            return !getExpenseTags(e).some(t => excludedTags.includes(t));
           }
+
+          if (currentTagFilter !== 'all' && !hasTag(e, currentTagFilter)) return false;
           return true;
         });
 
@@ -1031,7 +1106,11 @@
         if (!displayExpenses.length) {
           const emptyMsg = searchQuery
             ? 'No expenses match your search.'
-            : (currentStatusFilter !== 'all' ? `No ${currentStatusFilter} expenses found.` : 'No expenses in this tag.');
+            : (currentStatusFilter !== 'all'
+              ? `No ${currentStatusFilter} expenses found.`
+              : (filterMode === 'exclude' && excludedTags.length
+                ? (excludedTags.length === 1 ? `Nothing left after hiding "${excludedTags[0]}".` : 'Nothing left after hiding those tags.')
+                : 'No expenses in this tag.'));
           list.innerHTML = `<div class="py-10 text-center text-sm text-slate-400">${emptyMsg}</div>`;
           return;
         }
